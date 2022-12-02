@@ -1,0 +1,203 @@
+#include <iostream>
+#include <Windows.h>
+#include <time.h>
+#include <list>
+#include <cassert>
+#include <iomanip>
+#include <cmath>
+
+#define N 6
+#define M 6
+#define liczba_a 1
+
+using namespace std;
+
+template <typename T>
+void transformuj(typename T::iterator i1, typename T::iterator i2, typename T::iterator i3);
+template <typename T>
+void roznicuj(typename T::iterator i1, typename T::iterator i2, typename T::iterator i3);
+template <typename T>
+void objetosc(typename T::iterator i1, typename T::iterator i2, double& a);
+
+template<typename T>
+struct lista {
+	T pole;
+	lista* nast{ NULL };
+};
+
+template<typename T>
+class Konten
+{
+	lista<T>* glowa{ NULL };
+	lista<T>* ogon{ NULL };
+	int top;
+public:
+	Konten() : top(0) {}
+	void push(T i) {
+		if (glowa == NULL) {
+			glowa = new lista<T>;
+			glowa->pole = i;
+			glowa->nast = NULL;
+			ogon = glowa;
+		}
+		else {
+			ogon->nast = new lista<T>;
+			ogon = ogon->nast;
+			ogon->pole = i;
+			ogon->nast = NULL;
+		}
+		top++;
+	};
+	void pop() {
+		if (glowa == NULL) return;
+		if (glowa->nast == NULL) {
+			T i = glowa->pole;
+			delete glowa;
+			top--;
+			return;
+		}
+		lista<T>* tmp = glowa;
+		while (tmp->nast != ogon)
+			tmp = tmp->nast;
+		ogon = tmp;
+		delete ogon->nast;
+		ogon->nast = NULL;
+		top--;
+	};
+	int rozmiar() { return top; };
+
+	void draw() {
+		if (glowa == NULL) return;
+		lista<T>* tmp = glowa;
+		while (tmp->nast != NULL) {
+			cout << setw(10) << /*setprecision(4) <<*/ tmp->pole << " ";
+			tmp = tmp->nast;
+		}
+		cout << endl;
+	}
+	
+
+	class iterator {
+		Konten<T> s;
+		lista<T>* suwak;
+	public:
+		iterator(Konten& is) : s(is), suwak(s.glowa) {};
+		iterator(Konten& is, bool) : s(is), suwak(s.ogon) {};
+		lista<T>* operator++() { // Prefix
+			suwak = suwak->nast;
+			return suwak;
+		};
+		lista<T>* operator++(int) { // Postfix
+			lista<T>* tmp2 = suwak;
+			suwak = suwak->nast;
+			return tmp2;
+		};
+		T& operator*() const { return suwak->pole; };
+		iterator& operator=(const iterator& rv) {
+			suwak = rv.suwak;
+			s = rv.s;
+			return *this;
+		}
+		bool operator!=(const iterator& obj) {
+			if (suwak != obj.suwak) {
+				return true;
+			}
+			return false;
+		}
+		bool operator>(const iterator& obj) {
+			if (suwak->pole > obj.suwak->pole) return true;
+			return false;
+		}
+	};
+	iterator begin() { return iterator(*this); };
+	iterator end() { return iterator(*this, true); };
+
+	friend class iterator;
+};
+
+template<typename T>
+class Kalkulator {
+public:
+	static double MaxObjetoscChmury(typename Konten<Konten<T>>::iterator pierwszy,
+		typename Konten<Konten<T>>::iterator drugi) {
+
+		typename Konten< Konten<T>>::iterator tmp = pierwszy;
+		Konten<T> a = *pierwszy;
+		Konten<T> b;
+		tmp++;
+		while (tmp != drugi) {
+			b = *tmp;
+			transformuj<Konten<T>>(a.begin(), a.end(), b.begin());
+			tmp++;
+		}
+		b = *drugi;
+		transformuj<Konten<T>>(a.begin(), a.end(), b.begin());
+		*pierwszy = a;
+		tmp = pierwszy;
+		while (tmp != drugi) {
+			b = *tmp;
+			transformuj<Konten<T>>(b.begin(), b.end(), a.begin());
+			tmp++;
+		}
+		*drugi = b;
+		a = *pierwszy;
+		roznicuj<Konten<T>>(a.begin(), a.end(), b.begin());
+		double A = liczba_a;
+		objetosc<Konten<T>>(a.begin(), a.end(), A);
+
+		return A;
+	}
+};
+
+template <typename T>
+void transformuj(typename T::iterator i1, typename T::iterator i2, typename T::iterator i3) {
+	while (i1 != i2) {
+		if (i1 > i3) {
+			double tmp = *i1;
+			*i1 = *i3;
+			*i3 = tmp;
+		}
+		i1++;
+		i3++;
+	}
+}
+template <typename T>
+void roznicuj(typename T::iterator i1, typename T::iterator i2, typename T::iterator i3) {
+	while (i1 != i2) {
+		*i1 = fabs(*i3 - *i1);
+		i1++;
+		i3++;
+	}
+}
+template <typename T>
+void objetosc(typename T::iterator i1, typename T::iterator i2, double& a) {
+	while (i1 != i2) {
+		a = a * (*i1);
+		i1++;
+	}
+}
+
+double randdouble()
+{
+	return rand() / (double(RAND_MAX) + 1) * 10;
+}
+
+int main()
+{
+	srand(time(NULL));
+
+	Konten<Konten<double>> punkty;
+	auto it_p{ punkty.begin() };
+
+	for (int i = 0; i < M; i++) {
+		Konten<double> a;
+		for (int j = 0; j < N; j++) {
+			a.push(randdouble());
+		}
+		punkty.push(a);
+	}
+
+	Kalkulator<double> kalk;
+	double V = kalk.MaxObjetoscChmury(punkty.begin(), punkty.end());
+	cout << V << endl;
+}
